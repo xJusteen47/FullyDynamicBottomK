@@ -299,6 +299,9 @@ public:
      *
      * If fewer than m finite elements are available, the range contains all
      * finite elements currently present in the buffer.
+     * 
+     * TODO: consider returning a pair of iterators instead of a struct with begin() and end() methods,
+     * and also consider using a struct that returns the second iterator in O(log l) time instead of O(m) time, to avoid copying the elements.
      */
     BottomView getBottomM(int bufferIdx) const
     {
@@ -334,20 +337,70 @@ public:
         return c / static_cast<double>(k);
     }
 
-     /**
-     * Static method that given two sketches (TreeKLMinhash) A & B returns the estimation of their jaccard similarity on their i-th
-     * bottom-m buffer.
+    /**
+     * Returns the multiset Jaccard similarity of the i-th bottom-m buffers.
+     *
+     * The numerator uses the full multiset intersection. The denominator is
+     * the first m elements of the multiset union, as required by bottom-m
+     * similarity. Infinite padding values are not part of either bottom-m
+     * view.
      */
     static double bottomMSimilarity(TreeKLMinhash *A, TreeKLMinhash *B, int i)
     {
-        num *sigA = A->getBottomM(i).begin();
-        num *sigB = B->getBottomM(i).begin();
+        const BottomView bottomA = A->getBottomM(i);
+        const BottomView bottomB = B->getBottomM(i);
 
-        int m = A->m;
-        double c = .0;
-        for (int i = 0; i < m   ; i++)
-            
-        return c / static_cast<double>(k);
+        map<num, size_t> countsA;
+        map<num, size_t> countsB;
+
+        for (auto it = bottomA.begin(); it != bottomA.end(); ++it)
+            ++countsA[*it];
+        for (auto it = bottomB.begin(); it != bottomB.end(); ++it)
+            ++countsB[*it];
+
+        auto itA = countsA.begin();
+        auto itB = countsB.begin();
+        size_t intersection = 0;
+        size_t unionBottomM = 0;
+        const size_t m = static_cast<size_t>(A->m);
+
+        while (unionBottomM < m &&
+               (itA != countsA.end() || itB != countsB.end()))
+        {
+            size_t countA = 0;
+            size_t countB = 0;
+
+            if (itB == countsB.end() ||
+                (itA != countsA.end() && itA->first < itB->first))
+            {
+                countA = itA->second;
+                ++itA;
+            }
+            else if (itA == countsA.end() || itB->first < itA->first)
+            {
+                countB = itB->second;
+                ++itB;
+            }
+            else
+            {
+                countA = itA->second;
+                countB = itB->second;
+                ++itA;
+                ++itB;
+            }
+
+            //take: quante copie del valore corrente devo prendere, rispettando il limite dei primi m elementi dell’unione.
+
+            const size_t unionCount = max(countA, countB);
+            const size_t take = min(unionCount, m - unionBottomM);
+            unionBottomM += take;
+            intersection += min(min(countA, countB), take);
+        }
+
+        return unionBottomM == 0
+                   ? 0.0
+                   : static_cast<double>(intersection) /
+                         static_cast<double>(unionBottomM);
     }
 
 
