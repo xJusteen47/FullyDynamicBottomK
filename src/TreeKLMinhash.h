@@ -9,6 +9,7 @@
 #include "hash.cpp"
 #include "Sketch.cpp"
 
+
 using namespace std;
 
 #define num uint32_t
@@ -26,11 +27,6 @@ private:
      * k: number of hash functions and buffers in the signature
      */
     int k;
-
-    /**
-     * Minimum number of finite elements required in a buffer.
-     */
-    int m;
 
     /**
      * l: number of hash values for each buffer
@@ -61,16 +57,6 @@ private:
     num *signature;
 
     /**
-     * Number of finite (non-infinite) elements in each buffer.
-     */
-    size_t *finiteSizes;
-
-    /**
-     * Cached result of finiteSizes[i] >= m.
-     */
-    bool *hasAtLeastM;
-
-    /**
      * explicitSet: if true, the set is explicitly stored.
      * TODO: it will be deleted in the future
      */
@@ -83,16 +69,7 @@ private:
     std::unordered_set<num> elements;
 
 public:
-    struct BottomView
-    {
-        multiset<num>::const_iterator first;
-        multiset<num>::const_iterator last;
-
-        multiset<num>::const_iterator begin() const { return first; }
-        multiset<num>::const_iterator end() const { return last; }
-    };
-
-    TreeKLMinhash() : k(1), m(1), l(1), U(1) {}
+    TreeKLMinhash() : k(1), l(1), U(1) {}
 
     TreeKLMinhash(int k, int l, num U, bool explicitSet = true)
     {
@@ -107,32 +84,17 @@ public:
         new (this) TreeKLMinhash(k, l, U, (Hash<num> **)hashes, explicitSet, true);
     }
 
-    TreeKLMinhash(int k, int m, int l, num U, bool explicitSet = true)
-        : TreeKLMinhash(k, l, U, explicitSet)
-    {
-        this->m = m;
-    }
-
-    TreeKLMinhash(int k, int m, int l, num U, Hash<num> **hashes,
-                  bool explicitSet = true, bool doFreeHashes = false)
-        : TreeKLMinhash(k, l, U, hashes, explicitSet, doFreeHashes)
-    {
-        this->m = m;
-    }
-
     /**
      * Constructor
      */
     TreeKLMinhash(int k, int l, num U, Hash<num> **hashes, bool explicitSet = true, bool doFreeHashes = false)
-        : k(k), m(l), l(l), U(U), hashes(hashes), explicitSet(explicitSet), doFreeHashes(doFreeHashes)
+        : k(k), l(l), U(U), hashes(hashes), explicitSet(explicitSet), doFreeHashes(doFreeHashes)
     {
         // this->hashes = new std::pair<num, num>[k];
         this->buffers = (multiset<num> **)malloc(k * sizeof(multiset<num> *));
         this->delta = (num *)malloc(k * sizeof(num));
 
         this->signature = (num *)malloc(this->k * sizeof(num));
-        this->finiteSizes = (size_t *)calloc(this->k, sizeof(size_t));
-        this->hasAtLeastM = (bool *)calloc(this->k, sizeof(bool));
 
         for (int i = 0; i < k; i++)
         {
@@ -154,8 +116,6 @@ public:
         delete[] this->buffers;
         delete[] this->delta;
         delete[] this->signature;
-        delete[] this->finiteSizes;
-        delete[] this->hasAtLeastM;
 
         if (doFreeHashes)
         {
@@ -196,16 +156,8 @@ public:
                 continue;
 
             auto current_max = this->buffers[i]->rbegin();
-            num old_max = *current_max;
             this->buffers[i]->erase(next(current_max).base());
             this->buffers[i]->insert(h);
-
-            if (old_max != NUM_MAX)
-                --this->finiteSizes[i];
-            if (h != NUM_MAX)
-                ++this->finiteSizes[i];
-            this->hasAtLeastM[i] = this->m <= 0 ||
-                                   this->finiteSizes[i] >= static_cast<size_t>(this->m);
 
             this->signature[i] = *this->buffers[i]->begin();
 
@@ -240,13 +192,8 @@ public:
             {
                 this->buffers[i]->erase(element);
                 this->buffers[i]->insert(NUM_MAX);
-                if (h != NUM_MAX)
-                    --this->finiteSizes[i];
-                this->hasAtLeastM[i] = this->m <= 0 ||
-                                       this->finiteSizes[i] >= static_cast<size_t>(this->m);
 
-                if (this->finiteSizes[i] < static_cast<size_t>(this->m) &&
-                    this->delta[i] != NUM_MAX)
+                if (*this->buffers[i]->begin() == NUM_MAX)
                 {
                     this->resetBuffer();
                     if (this->explicitSet)
@@ -283,46 +230,6 @@ public:
     }
 
     /**
-     * Returns a read-only view of the requested bottom-l buffer.
-     *
-     * The returned pointer refers to the multiset owned by this sketch. It
-     * remains valid until the sketch is destroyed, while its contents change
-     * as elements are inserted or removed.
-     */
-    const multiset<num> *getBottomL(int bufferIdx) const
-    {
-        return this->buffers[bufferIdx];
-    }
-
-    /**
-     * Returns the finite bottom-m range without copying its elements.
-     *
-     * If fewer than m finite elements are available, the range contains all
-     * finite elements currently present in the buffer.
-     * 
-     * TODO: consider returning a pair of iterators instead of a struct with begin() and end() methods,
-     * and also consider using a struct that returns the second iterator in O(log l) time instead of O(m) time, to avoid copying the elements.
-     */
-    BottomView getBottomM(int bufferIdx) const
-    {
-        const auto &buffer = *this->buffers[bufferIdx];
-        auto first = buffer.begin();
-        auto bottomMEnd = first;
-        std::advance(bottomMEnd,
-                     std::min(this->finiteSizes[bufferIdx],
-                              static_cast<size_t>(this->m)));
-        return {first, bottomMEnd};
-    }
-
-    /**
-     * Returns whether the buffer contains at least m finite elements.
-     */
-    bool bufferHasAtLeastM(int bufferIdx) const
-    {
-        return this->hasAtLeastM[bufferIdx];
-    }
-
-    /**
      * Static method that given two sketches (TreeKLMinhash) A & B returns the estimation of their jaccard similarity.
      */
     static double similarity(TreeKLMinhash *A, TreeKLMinhash *B)
@@ -338,73 +245,6 @@ public:
     }
 
     /**
-     * Returns the multiset Jaccard similarity of the i-th bottom-m buffers.
-     *
-     * The numerator uses the full multiset intersection. The denominator is
-     * the first m elements of the multiset union, as required by bottom-m
-     * similarity. Infinite padding values are not part of either bottom-m
-     * view.
-     */
-    static double bottomMSimilarity(TreeKLMinhash *A, TreeKLMinhash *B, int i)
-    {
-        const BottomView bottomA = A->getBottomM(i);
-        const BottomView bottomB = B->getBottomM(i);
-
-        map<num, size_t> countsA;
-        map<num, size_t> countsB;
-
-        for (auto it = bottomA.begin(); it != bottomA.end(); ++it)
-            ++countsA[*it];
-        for (auto it = bottomB.begin(); it != bottomB.end(); ++it)
-            ++countsB[*it];
-
-        auto itA = countsA.begin();
-        auto itB = countsB.begin();
-        size_t intersection = 0;
-        size_t unionBottomM = 0;
-        const size_t m = static_cast<size_t>(A->m);
-
-        while (unionBottomM < m &&
-               (itA != countsA.end() || itB != countsB.end()))
-        {
-            size_t countA = 0;
-            size_t countB = 0;
-
-            if (itB == countsB.end() ||
-                (itA != countsA.end() && itA->first < itB->first))
-            {
-                countA = itA->second;
-                ++itA;
-            }
-            else if (itA == countsA.end() || itB->first < itA->first)
-            {
-                countB = itB->second;
-                ++itB;
-            }
-            else
-            {
-                countA = itA->second;
-                countB = itB->second;
-                ++itA;
-                ++itB;
-            }
-
-            //take: quante copie del valore corrente devo prendere, rispettando il limite dei primi m elementi dell’unione.
-
-            const size_t unionCount = max(countA, countB);
-            const size_t take = min(unionCount, m - unionBottomM);
-            unionBottomM += take;
-            intersection += min(min(countA, countB), take);
-        }
-
-        return unionBottomM == 0
-                   ? 0.0
-                   : static_cast<double>(intersection) /
-                         static_cast<double>(unionBottomM);
-    }
-
-
-    /**
      * Resets the buffer to default values.
      */
     void resetBuffer()
@@ -413,8 +253,6 @@ public:
         {
             this->delta[i] = NUM_MAX;
             this->buffers[i]->clear();
-            this->finiteSizes[i] = 0;
-            this->hasAtLeastM[i] = false;
             for (int j = 0; j < this->l; j++)
                 this->buffers[i]->insert(NUM_MAX);
 
