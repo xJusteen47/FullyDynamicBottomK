@@ -11,7 +11,7 @@ using namespace std;
 
 void permute(int *a, int n)
 {
-    random_shuffle(a, a + n);
+    std::shuffle(a, a + n, std::default_random_engine());
 }
 
 /**

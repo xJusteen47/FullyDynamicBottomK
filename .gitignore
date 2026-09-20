@@ -4,3 +4,6 @@ build/
 **/*.old
 
 .cache/
+output1.txt
+
+experiments.exe

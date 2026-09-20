@@ -1,3 +1,6 @@
+#ifndef UTILS_H
+#define UTILS_H
+
 #include <cstdio>
 #include <cstdlib>
 
@@ -70,3 +73,5 @@ std::unordered_map<int, set<int> *> *loadSetsFromFile(std::string fileName)
 
     return sets;
 }
+
+#endif
