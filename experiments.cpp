@@ -158,10 +158,10 @@ void experiment1LBBK()
       // l = k
       singleSetImplicitBottomK(k, k, N);
 
-      for (int l = k; l <= 10*k; l += k)
+      for (int l = 5*k; l <= 100*k; l += 5*k)
         singleSetImplicitBottomK(k, l, N);
 
-      for (int l = 20*k; l <= 100*k; l += 20*k)
+      for (int l = 200*k; l <= 1000*k; l += 100*k)
         singleSetImplicitBottomK(k, l, N);
     }
   }
@@ -230,12 +230,12 @@ void experiment2LBBK()
       // l=k = 1
       slidingWindowBottomK(k, k, U, 2 * N, max_size);
 
-      for (int l = k; l <= 10*k; l += k)
+      for (int l = 5*k; l <= 100*k; l += 5*k)
       {
         slidingWindowBottomK(k, l, U, 2 * N, max_size);
       }
 
-      for (int l = 20*k; l <= 100*k; l += 20*k)
+      for (int l = 200*k; l <= 1000*k; l += 100*k)
       {
         slidingWindowBottomK(k, l, U, 2 * N, max_size);
       }
@@ -270,7 +270,7 @@ void experiment3()
   for (int i = 0; i < 6; i++)
   {
     for (int n = 0; n < n_tests; n++)
-      singleSetImplicitBottomK(K[i], l, N);
+      singleSetImplicitBottomK(K[i], l*K[i], N);
   }
 
   cout << "DSS" << endl;
@@ -315,8 +315,7 @@ void experiment4()
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 6; i++)
     for (int n = 0; n < n_tests; n++)
-      testBottomKQuery(l, size, n_query, K[i]);
-
+      testBottomKQuery( K[i], l*K[i], size, n_query);
 
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 6; i++)
@@ -353,8 +352,7 @@ void experiment5()
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 15; i++)
     for (int n = 0; n < n_tests; n++)
-      testLBBKUpdatesAndQuery(n_hashes, l, size, p[i]);
-
+      testLBBKUpdatesAndQuery(n_hashes, l*n_hashes, size, p[i]); // n_hashes is the value of k for LBBK in this case
 
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 15; i++)
@@ -426,7 +424,7 @@ void experiment6()
       err_DMH = SE_DMH(k, l, U, p1, p2, (Hash<uint32_t> **)hashes);
       err_DSS = SE_DSS(c, c, U, p1, p2, (Hash<uint32_t> **)hashes, (Hash<uint32_t> *)h1, (Hash<uint32_t> *)h2);
       err_min_hash = SE_DMH(k * l, 1, U, p1, p2, (Hash<uint32_t> **)hashes);
-      err_LBBK = SE_BottomK(k, l, U, p1, p2, (Hash<uint32_t> **)hashes);
+      err_LBBK = SE_BottomK(k, l*k, U, p1, p2, (Hash<uint32_t> **)hashes);
 
       printf("%f, %f, %f, %f, %f\n", j, err_DMH, err_DSS, err_min_hash, err_LBBK);
     }
