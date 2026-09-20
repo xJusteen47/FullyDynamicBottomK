@@ -1,6 +1,5 @@
 #include "src/DSS.cpp"
 #include "src/LSH.cpp"
-#include "src/TreeBottomK.h"
 #include "src/hash.cpp"
 #include "src/BitArray.cpp"
 #include "src/test/test.cpp"
@@ -10,12 +9,14 @@
 #include "src/Utils.cpp"
 
 #include "src/TreeKLMinhash.h"
-#include "src/DSS.cpp"
+#include "src/TreeBottomK.h"
 
 using namespace std;
 
 void experiment1();
+void experiment1LBBK();
 void experiment2();
+void experiment2LBBK();
 void experiment3();
 void experiment4();
 void experiment5();

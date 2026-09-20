@@ -1,0 +1,51 @@
+In file included from experiments.cpp:1:0:
+src/DSS.cpp: In member function 'uint32_t* DSS::getSignature(double, double)':
+src/DSS.cpp:178:31: error: 'uint' does not name a type
+         int row = static_cast<uint>(log2(alpha * r * this->size));
+                               ^~~~
+In file included from experiments.cpp:4:0:
+src/BitArray.cpp: In function 'uint32_t count_one(uint64_t*, uint32_t)':
+src/BitArray.cpp:58:41: error: '_mm_popcnt_u64' was not declared in this scope
+         count += _mm_popcnt_u64(array[i]);
+                                         ^
+src/BitArray.cpp: In function 'uint32_t size_intersection(uint64_t*, uint64_t*, uint32_t)':
+src/BitArray.cpp:92:45: error: '_mm_popcnt_u64' was not declared in this scope
+         result += _mm_popcnt_u64(A[i] & B[i]);
+                                             ^
+src/BitArray.cpp: In function 'uint32_t size_union(uint64_t*, uint64_t*, uint32_t)':
+src/BitArray.cpp:102:45: error: '_mm_popcnt_u64' was not declared in this scope
+         result += _mm_popcnt_u64(A[i] | B[i]);
+                                             ^
+In file included from experiments.cpp:9:0:
+src/Utils.cpp: In function 'int intersection(std::set<int>*, std::set<int>*)':
+src/Utils.cpp:15:5: error: redefinition of 'int intersection(std::set<int>*, std::set<int>*)'
+ int intersection(set<int> *s1, set<int> *s2)
+     ^~~~~~~~~~~~
+In file included from src/test/../TreeBottomK.h:7:0,
+                 from src/test/test.cpp:4,
+                 from experiments.cpp:5:
+src/test/../Utils.cpp:15:5: note: 'int intersection(std::set<int>*, std::set<int>*)' previously defined here
+ int intersection(set<int> *s1, set<int> *s2)
+     ^~~~~~~~~~~~
+In file included from experiments.cpp:9:0:
+src/Utils.cpp: In function 'double jaccard(std::set<int>*, std::set<int>*)':
+src/Utils.cpp:29:8: error: redefinition of 'double jaccard(std::set<int>*, std::set<int>*)'
+ double jaccard(set<int> *s1, set<int> *s2)
+        ^~~~~~~
+In file included from src/test/../TreeBottomK.h:7:0,
+                 from src/test/test.cpp:4,
+                 from experiments.cpp:5:
+src/test/../Utils.cpp:29:8: note: 'double jaccard(std::set<int>*, std::set<int>*)' previously defined here
+ double jaccard(set<int> *s1, set<int> *s2)
+        ^~~~~~~
+In file included from experiments.cpp:9:0:
+src/Utils.cpp: In function 'std::unordered_map<int, std::set<int>*>* loadSetsFromFile(std::__cxx11::string)':
+src/Utils.cpp:46:38: error: redefinition of 'std::unordered_map<int, std::set<int>*>* loadSetsFromFile(std::__cxx11::string)'
+ std::unordered_map<int, set<int> *> *loadSetsFromFile(std::string fileName)
+                                      ^~~~~~~~~~~~~~~~
+In file included from src/test/../TreeBottomK.h:7:0,
+                 from src/test/test.cpp:4,
+                 from experiments.cpp:5:
+src/test/../Utils.cpp:46:38: note: 'std::unordered_map<int, std::set<int>*>* loadSetsFromFile(std::__cxx11::string)' previously defined here
+ std::unordered_map<int, set<int> *> *loadSetsFromFile(std::string fileName)
+                                      ^~~~~~~~~~~~~~~~
