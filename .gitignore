@@ -1,9 +1,30 @@
+# Editor and local tooling
 .vscode/
-build/
-
-**/*.old
-
 .cache/
-output1.txt
 
-experiments.exe
+# Build output
+build/
+*.exe
+*.out
+*.obj
+*.o
+*.pdb
+*.ilk
+*.log
+
+# Python cache and generated plots
+__pycache__/
+*.py[cod]
+Python/plots/
+Python/plots_*/
+
+# Generated experiment data
+output*.txt
+experiments*_out.txt
+SimQE*.txt
+LBBK*_out.txt
+
+# Temporary and backup files
+**/*.old
+*.tmp
+*.bak

@@ -199,7 +199,6 @@ public:
         const multiset<num> *bottomA = A->getBottomK();
         const multiset<num> *bottomB = B->getBottomK();
         multiset<num> intersectionSet;
-        multiset<num> unionSet;
 
 
         // The standard algorithms preserve multiset multiplicities:
@@ -220,6 +219,57 @@ public:
         else
             return static_cast<double>(intersectionSize) / static_cast<double>(unionSize);
     }
+
+    static double bottomKSimilarityCohenEstimator(
+        const TreeBottomK *A,
+        const TreeBottomK *B)
+    {
+        const multiset<num> *bottomA = A->getBottomK();
+        const multiset<num> *bottomB = B->getBottomK();
+        multiset<num> intersectionSet;
+        multiset<num> unionSet;
+
+        // Cohen's estimator uses the common k-th-smallest hash as threshold.
+        set_union(
+            bottomA->begin(),
+            bottomA->end(),
+            bottomB->begin(),
+            bottomB->end(),
+            inserter(unionSet, unionSet.end()));
+
+        if (unionSet.empty())
+            return 0.0;
+
+        const size_t thresholdIndex = min(
+            static_cast<size_t>(A->k),
+            unionSet.size()) - 1;
+        auto threshold = unionSet.begin();
+        advance(threshold, thresholdIndex);
+        const num tau = *threshold;
+
+        set_intersection(
+            bottomA->begin(),
+            bottomA->end(),
+            bottomB->begin(),
+            bottomB->end(),
+            inserter(intersectionSet, intersectionSet.end()));
+
+        const size_t sampledUnionSize =
+            count_if(unionSet.begin(), unionSet.end(), [tau](num value) {
+                return value <= tau;
+            });
+        const size_t sampledIntersectionSize =
+            count_if(
+                intersectionSet.begin(),
+                intersectionSet.end(),
+                [tau](num value) { return value <= tau; });
+
+        if (sampledUnionSize == 0)
+            return 0.0;
+        return static_cast<double>(sampledIntersectionSize) /
+               static_cast<double>(sampledUnionSize);
+    }
+
 
     void resetBuffer()
     {

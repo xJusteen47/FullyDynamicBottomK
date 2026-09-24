@@ -28,11 +28,13 @@ void datasetStatistics(std::string);
 int main(int argc, char const *argv[])
 {
   // example of usage
-   experiment1LBBK();
-   experiment2LBBK();
-   experiment3();
-   experiment4();
-   experiment5();
+   //experiment1();
+   //experiment1LBBK();
+   //experiment2();
+   //experiment2LBBK();
+   //experiment3();
+   //experiment4();
+   //experiment5();
    experiment6();
   // std::string datasetName = "dataset/dataset_soc-LiveJournal1.txt";
   // std::string datasetName = "dataset/dataset_com-orkut.ungraph.txt";
@@ -118,6 +120,8 @@ void experiment1()
   int N = 1 << 16;
   int n_tests = 8;
 
+  cout << "\nBuffered MinHash fixed updates\n";
+
 #pragma omp parallel for collapse(2)
 
   for (int n = 0; n < n_tests; n++)
@@ -136,6 +140,8 @@ void experiment1()
         singleSetImplicit(k, l, N);
     }
   }
+
+  cout<< "\nEnd of Buffered MinHash fixed updates\n\n" << endl;
 }
 
 /**
@@ -147,6 +153,8 @@ void experiment1LBBK()
   int K[4] = {1, 100, 1000, 2000};
   int N = 1 << 16;
   int n_tests = 8;
+
+  cout << "\nL-buffered bottom-k fixed updates\n";
 
 #pragma omp parallel for collapse(2)
 
@@ -166,7 +174,10 @@ void experiment1LBBK()
         singleSetImplicitBottomK(k, l, N);
     }
   }
+
+  cout << "\nEnd of L-buffered bottom-k fixed updates\n\n" << endl;
 }
+
 
 
 /**
@@ -181,6 +192,8 @@ void experiment2()
   int N = 1 << 10;
   int max_size = N / 5;
   int n_tests = 10;
+
+  cout << "\nBuffered MinHash sliding window\n";
 
 #pragma omp parallel for
 
@@ -204,6 +217,8 @@ void experiment2()
       }
     }
   }
+
+  cout << "\nEnd of Buffered MinHash sliding window\n";
 }
 
 
@@ -219,6 +234,8 @@ void experiment2LBBK()
   int N = 1 << 10;
   int max_size = N / 5;
   int n_tests = 10;
+
+  cout << "\nL-buffered bottom-k sliding window\n";
 
 #pragma omp parallel for
 
@@ -242,6 +259,8 @@ void experiment2LBBK()
       }
     }
   }
+
+  cout << "\nEnd of L-buffered bottom-k sliding window\n";
 }
 
 /**
@@ -256,7 +275,7 @@ void experiment3()
   int l = 32;
   int n_tests = 10;
 
-  cout << "l-buffered k-minhash" << endl;
+  cout << "\nBuffered MinHash experiment3\n";
 
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 6; i++)
@@ -265,7 +284,9 @@ void experiment3()
       singleSetImplicit(K[i], l, N);
   }
   
-  cout << "l-buffered bottom-k" << endl;
+  cout << "\nEnd of Buffered MinHash experiment3\n\n" << endl;
+
+  cout << "l-buffered bottom-k experiment3\n";
 
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 6; i++)
@@ -274,6 +295,8 @@ void experiment3()
       singleSetImplicitBottomK(K[i], l*K[i], N);
   }
 
+  cout << "\nEnd of l-buffered bottom-k experiment3\n\n" << endl;
+  /*
   cout << "DSS" << endl;
 
 #pragma omp parallel for collapse(2)
@@ -291,7 +314,7 @@ void experiment3()
     for (int n = 0; n < n_tests; n++)
       testDSSProactive(K[i], N, K[i]);
   }
-
+*/
   
 }
 
@@ -308,16 +331,24 @@ void experiment4()
   int n_query = 1 << 16;
   int n_tests = 14;
 
+  cout << "\nBuffered MinHash experiment4\n";
+
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 6; i++)
     for (int n = 0; n < n_tests; n++)
       testKLMinhashQuery(l, size, n_query, K[i]);
+
+  cout << "\nEnd of Buffered MinHash experiment4\n\n" << endl;
+
+  cout << "l-buffered bottom-k experiment4\n";
 
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 6; i++)
     for (int n = 0; n < n_tests; n++)
       testBottomKQuery( K[i], l*K[i], size, n_query);
 
+  cout << "\nEnd of l-buffered bottom-k experiment4\n\n" << endl;
+      /*
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 6; i++)
     for (int n = 0; n < n_tests; n++)
@@ -327,6 +358,8 @@ void experiment4()
   for (int i = 0; i < 6; i++)
     for (int n = 0; n < n_tests; n++)
       testDSSProactiveQuery(K[i], size, n_query, K[i]);
+
+      */
 }
 
 /**
@@ -345,16 +378,24 @@ void experiment5()
 
   cout << "sketch,k,l,N,n_hash,faults,p,time" << endl;
 
+  cout << "\nBuffered MinHash experiment5\n";
+
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 15; i++)
     for (int n = 0; n < n_tests; n++)
       testKLMinhashUpdatesAndQuery(n_hashes, l, size, p[i]);
 
+    cout << "\nEnd of Buffered MinHash experiment5\n\n" << endl;
+
+    cout << "l-buffered bottom-k experiment5\n";
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 15; i++)
     for (int n = 0; n < n_tests; n++)
       testLBBKUpdatesAndQuery(n_hashes, l*n_hashes, size, p[i]); // n_hashes is the value of k for LBBK in this case
 
+  cout << "\nEnd of l-buffered bottom-k experiment5\n\n" << endl;
+  
+      /*
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 15; i++)
     for (int n = 0; n < n_tests; n++)
@@ -364,6 +405,7 @@ void experiment5()
   for (int i = 0; i < 15; i++)
     for (int n = 0; n < n_tests; n++)
       testDSSUpdatesAndQuery(c, size, n_hashes, p[i]);
+      */
 }
 
 /**
@@ -406,7 +448,8 @@ void experiment6()
   PairWiseHash<uint32_t> *h1 = new PairWiseHash<uint32_t>();
   PairWiseHash<uint32_t> *h2 = new PairWiseHash<uint32_t>(c);
 
-  cout << "sim,DMH,DSS,min_hash,LBBK" << endl;
+  cout << "sim,DMH,DSS,min_hash,LBBK,LBBK_Cohen" << endl;
+  cout << "bottomk_sizes,target_similarity,actual_jaccard,size_A,size_B,squared_error" << endl;
 
   for (auto itr = params.begin(); itr != params.end(); itr++)
   {
@@ -418,6 +461,7 @@ void experiment6()
     double err_DSS = 0.0;
     double err_min_hash = 0.0;
     double err_LBBK = 0.0;
+    double err_LBBK_Cohen = 0.0;
 
 #pragma omp parallel for // reduction(+ : err_DMH, err_DSS)
     for (int n = 0; n < n_test; n++)
@@ -425,9 +469,19 @@ void experiment6()
       err_DMH = SE_DMH(k, l, U, p1, p2, (Hash<uint32_t> **)hashes);
       err_DSS = SE_DSS(c, c, U, p1, p2, (Hash<uint32_t> **)hashes, (Hash<uint32_t> *)h1, (Hash<uint32_t> *)h2);
       err_min_hash = SE_DMH(k * l, 1, U, p1, p2, (Hash<uint32_t> **)hashes);
-      err_LBBK = SE_BottomK(k, l*k, U, p1, p2, (Hash<uint32_t> **)hashes);
+      err_LBBK = SE_BottomK(
+          k, l * k, U, p1, p2, (Hash<uint32_t> **)hashes, j, false);
+      err_LBBK_Cohen = SE_BottomK(
+          k, l * k, U, p1, p2, (Hash<uint32_t> **)hashes, j, true);
 
-      printf("%f, %f, %f, %f, %f\n", j, err_DMH, err_DSS, err_min_hash, err_LBBK);
+      printf(
+          "%f, %f, %f, %f, %f, %f\n",
+          j,
+          err_DMH,
+          err_DSS,
+          err_min_hash,
+          err_LBBK,
+          err_LBBK_Cohen);
     }
 
     // err_DMH = sqrt(err_DMH / (double)n_test);
