@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+# Nomi riconosciuti nei dati e regole per distinguere gli sketch.
 TIMING_SKETCHES = {
     "BottomK",
     "BufferKLMinhash",
@@ -29,8 +30,11 @@ TIMING_SKETCHES = {
     "LBBK",
 }
 FIXED_UPDATE_K_VALUES = {1, 100, 1000, 2000}
+DMH_NAMES = {"BufferKLMinhash", "MinHash", "DMH"}
+LBBK_NAMES = {"BottomK", "LBBK"}
 
 
+# Record tipizzati: separano il parsing dei dati dalla generazione dei grafici.
 @dataclass(frozen=True)
 class TimingResult:
     sketch: str
@@ -48,6 +52,7 @@ class SimilarityResult:
     errors: dict[str, float]
 
 
+# Lettura dell'output CSV-like: tempi e risultati di stima della similarità.
 def _float(value: str) -> float:
     return float(value.strip())
 
@@ -120,6 +125,7 @@ def read_results(
     return timings, similarities
 
 
+# Grafici dei tempi: probabilità di fault, k e dimensione del buffer.
 def _median(values: list[float]) -> float:
     return statistics.median(values)
 
@@ -218,11 +224,12 @@ def _plot_timing_by_l(
     return True
 
 
+# Grafici di fault, tempi normalizzati e errore di similarità.
 def _plot_faults_by_l(timings: list[TimingResult], output: Path) -> bool:
     records = [
         result
         for result in timings
-        if result.sketch in {"BufferKLMinhash", "MinHash", "BottomK"}
+        if result.sketch in DMH_NAMES | LBBK_NAMES
         and result.probability is None
         and result.size == 131072
         and result.k in FIXED_UPDATE_K_VALUES
@@ -238,8 +245,8 @@ def _plot_faults_by_l(timings: list[TimingResult], output: Path) -> bool:
     )
     for result in records:
         # MinHash stores k buffers of size l; LBBK stores one buffer of size l.
-        total_size = result.k * result.l if result.sketch in {"BufferKLMinhash", "MinHash"} else result.l
-        label = "MinHash" if result.sketch in {"BufferKLMinhash", "MinHash"} else "LBBK"
+        total_size = result.k * result.l if result.sketch in DMH_NAMES else result.l
+        label = "DMH" if result.sketch in DMH_NAMES else "LBBK"
         grouped[(label, result.k)][total_size].append(result.faults)
 
     figure, axis = plt.subplots(figsize=(11, 7))
@@ -256,7 +263,7 @@ def _plot_faults_by_l(timings: list[TimingResult], output: Path) -> bool:
         )
     axis.set(
         title="Fault medi a parità di memoria (fixed update)",
-        xlabel="Dimensione totale dello sketch (k*l per MinHash, l per LBBK)",
+        xlabel="Dimensione totale dello sketch (k*l per DMH, l per LBBK)",
         ylabel="Numero di fault (media)",
         ylim=(0, 30),
     )
@@ -275,7 +282,7 @@ def _plot_normalized_time_by_l(
     records = [
         result
         for result in timings
-        if result.sketch in {"BufferKLMinhash", "MinHash", "BottomK"}
+        if result.sketch in DMH_NAMES | LBBK_NAMES
         and result.probability is None
         and result.size == 131072
         and result.k in FIXED_UPDATE_K_VALUES
@@ -290,8 +297,8 @@ def _plot_normalized_time_by_l(
         lambda: defaultdict(list)
     )
     for result in records:
-        total_size = result.k * result.l if result.sketch in {"BufferKLMinhash", "MinHash"} else result.l
-        label = "MinHash" if result.sketch in {"BufferKLMinhash", "MinHash"} else "LBBK"
+        total_size = result.k * result.l if result.sketch in DMH_NAMES else result.l
+        label = "DMH" if result.sketch in DMH_NAMES else "LBBK"
         grouped[(label, result.k)][total_size].append(result.seconds)
 
     figure, axis = plt.subplots(figsize=(11, 7))
@@ -310,7 +317,7 @@ def _plot_normalized_time_by_l(
         )
     axis.set(
         title="Tempo medio normalizzato a parità di memoria",
-        xlabel="Dimensione totale dello sketch (k*l per MinHash, l per LBBK)",
+        xlabel="Dimensione totale dello sketch (k*l per DMH, l per LBBK)",
         ylabel="Tempo medio normalizzato (massimo della curva = 1)",
         ylim=(0, 1.05),
     )
@@ -358,6 +365,7 @@ def _plot_similarity(
     return True
 
 
+# Confronto per memoria totale: DMH usa k*l, LBBK usa l.
 def _plot_average_metric_by_size(
     timings: list[TimingResult],
     window: bool,
@@ -383,8 +391,8 @@ def _plot_average_metric_by_size(
         lambda: defaultdict(list)
     )
     for result in records:
-        sketch = "MinHash" if result.sketch.startswith("MinHash") else "BottomK"
-        total_size = result.k * result.l if sketch == "MinHash" else result.l
+        sketch = "DMH" if result.sketch.startswith("MinHash") else "LBBK"
+        total_size = result.k * result.l if sketch == "DMH" else result.l
         value = result.faults if metric == "faults" else result.seconds
         grouped[(sketch, result.k)][total_size].append(value)
 
@@ -406,7 +414,7 @@ def _plot_average_metric_by_size(
             y = [value / maximum if maximum else 0.0 for value in means]
         else:
             y = means
-        linestyle = "--" if sketch == "MinHash" else "-"
+        linestyle = "--" if sketch == "DMH" else "-"
         axis.plot(
             x,
             y,
@@ -432,7 +440,7 @@ def _plot_average_metric_by_size(
         )
     axis.set(
         title=title,
-        xlabel="Dimensione totale dello sketch (k*l MinHash, l Bottom-K)",
+        xlabel="Dimensione totale dello sketch (k*l DMH, l LBBK)",
         ylabel=ylabel,
     )
     axis.set_xscale("log")
@@ -448,14 +456,15 @@ def _plot_average_metric_by_size(
     return True
 
 
+# Avvio da terminale e selezione degli otto grafici da produrre.
 def main() -> int:
     repository = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--input",
         type=Path,
-        default=repository / "output2.txt",
-        help="file prodotto dagli esperimenti (default: output2.txt)",
+        default=repository / "LBBK_LBKMH_out.txt",
+        help="file prodotto dagli esperimenti (default: LBBK_LBKMH_out.txt)",
     )
     parser.add_argument(
         "--output-dir",

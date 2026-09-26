@@ -49,66 +49,6 @@ int main(int argc, char const *argv[])
   return 0;
 }
 
-/**
- * Bottom-k counterpart of the buffered MinHash experiments.
- *
- *  The values of m are the values used for k in the
- * original experiments, while l is always at least k.
- */
-void experiment8()
-{
-  const uint32_t U = UINT32_MAX;
-  const int M[6] = {64, 128, 256, 512, 1024, 2048};
-  const int lMultipliers[3] = {1, 2, 4};
-  const int N = 1 << 16;
-  const int nTests = 8;
-
-  cout << "Bottom-m updates" << endl;
-#pragma omp parallel for collapse(2)
-  for (int i = 0; i < 6; ++i)
-    for (int j = 0; j < nTests; ++j)
-      for (int multiplier : lMultipliers)
-        singleSetImplicitBottomK(M[i], M[i] * multiplier, N);
-
-  cout << "Bottom-k sliding window" << endl;
-  const int windowN = 1 << 10;
-  const int maxSize = windowN / 5;
-#pragma omp parallel for collapse(2)
-  for (int i = 0; i < 6; ++i)
-    for (int j = 0; j < nTests; ++j)
-      for (int multiplier : lMultipliers)
-        slidingWindowBottomK(
-            M[i], M[i] * multiplier, U, 2 * windowN, maxSize);
-
-  cout << "Bottom-k queries" << endl;
-  const int querySize = 1 << 16;
-  const int nQueries = 1 << 16;
-#pragma omp parallel for collapse(2)
-  for (int i = 0; i < 6; ++i)
-    for (int j = 0; j < nTests; ++j)
-      for (int multiplier : lMultipliers)
-        testBottomKQuery(
-            M[i], M[i] * multiplier, querySize, nQueries);
-
-  cout << "Bottom-k similarity" << endl;
-  const uint32_t similarityU = 1 << 12;
-  const double p1 = 0.75;
-  const double p2 = 0.10;
-#pragma omp parallel for collapse(2)
-  for (int i = 0; i < 6; ++i)
-    for (int j = 0; j < nTests; ++j)
-    {
-      for (int multiplier : lMultipliers)
-      {
-        TabulationHash<uint32_t> hash;
-        Hash<uint32_t> *hashes[1] = {&hash};
-        const double error = SE_BottomK(
-            M[i], M[i] * multiplier, similarityU, p1, p2, hashes);
-        printf("BottomKSimilarity,%d,%d,%f\n",
-               M[i], M[i] * multiplier, error);
-      }
-    }
-}
 
 /**
  * This experiment evaluate the performance of Buffered MinHash (BMH) after a fixed number of updates, using different values of l and k.

@@ -198,29 +198,46 @@ public:
     {
         const multiset<num> *bottomA = A->getBottomK();
         const multiset<num> *bottomB = B->getBottomK();
-        multiset<num> intersectionSet;
+        multiset<num> commonSet;
+        multiset<num> unionSet;
+        multiset<num> sampledUnion;
+        multiset<num> sampledCommon;
 
-
-        // The standard algorithms preserve multiset multiplicities:
-        // intersection keeps min(countA, countB), union keeps max(...).
+        // Compare the first k values of the ordered union of the sketches.
         set_intersection(
             bottomA->begin(),
             bottomA->end(),
             bottomB->begin(),
             bottomB->end(),
-            inserter(intersectionSet, intersectionSet.end()));
+            inserter(commonSet, commonSet.end()));
+        set_union(
+            bottomA->begin(),
+            bottomA->end(),
+            bottomB->begin(),
+            bottomB->end(),
+            inserter(unionSet, unionSet.end()));
 
-        const size_t intersectionSize = intersectionSet.size();
-        const size_t unionSize = min((bottomA->size() + bottomB->size() - intersectionSize), 
-            static_cast<size_t>(A->k));
-        
-        if (unionSize == 0)
+        const size_t sampledSize = min(
+            static_cast<size_t>(A->k),
+            unionSet.size());
+        auto sampledEnd = unionSet.begin();
+        advance(sampledEnd, sampledSize);
+        sampledUnion.insert(unionSet.begin(), sampledEnd);
+
+        set_intersection(
+            sampledUnion.begin(),
+            sampledUnion.end(),
+            commonSet.begin(),
+            commonSet.end(),
+            inserter(sampledCommon, sampledCommon.end()));
+
+        if (sampledSize == 0)
             return 0.0;
-        else
-            return static_cast<double>(intersectionSize) / static_cast<double>(unionSize);
+        return static_cast<double>(sampledCommon.size()) /
+               static_cast<double>(sampledSize);
     }
 
-    static double bottomKSimilarityCohenEstimator(
+    static double bottomKSimilarityTauEstimator(
         const TreeBottomK *A,
         const TreeBottomK *B)
     {

@@ -804,7 +804,7 @@ double SE_BottomK(
 
     // estimate the similarity between A and B
     double estimation = use_cohen_estimator
-                            ? TreeBottomK::bottomKSimilarityCohenEstimator(SA, SB)
+                            ? TreeBottomK::bottomKSimilarityTauEstimator(SA, SB)
                             : TreeBottomK::bottomKSimilarity(SA, SB);
     
 

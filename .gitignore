@@ -17,6 +17,7 @@ __pycache__/
 *.py[cod]
 Python/plots/
 Python/plots_*/
+Python/speedup_reports/
 
 # Generated experiment data
 output*.txt
@@ -28,3 +29,13 @@ LBBK*_out.txt
 **/*.old
 *.tmp
 *.bak
+
+# LaTeX build artifacts
+report/*.aux
+report/*.log
+report/*.out
+report/*.toc
+report/*.synctex.gz
+report/*.pdf
+report/experimental_evaluation_overleaf.zip
+report/experimental_evaluation.tex

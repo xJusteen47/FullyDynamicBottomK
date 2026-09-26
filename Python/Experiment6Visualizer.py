@@ -23,6 +23,17 @@ from collections import defaultdict
 from pathlib import Path
 
 
+# Etichette mostrate nel grafico e metodi da escludere.
+EXCLUDED_METHODS = {"LBBK_Cohen", "Cohen", "Tau", "tau"}
+METHOD_LABELS = {
+    "DMH": "DMH",
+    "DSS": "DSS",
+    "min_hash": "MinHash",
+    "LBBK": "LBBK",
+}
+
+
+# Lettura input: raggruppa per similarità gli errori quadratici di ogni metodo.
 def read_squared_errors(
     path: Path,
 ) -> tuple[list[str], dict[float, dict[str, list[float]]]]:
@@ -53,6 +64,7 @@ def read_squared_errors(
     return methods, dict(grouped)
 
 
+# Grafico: converte gli errori quadratici in RMSE e aggiunge le bande di deviazione.
 def plot_rmse(
     methods: list[str],
     grouped: dict[float, dict[str, list[float]]],
@@ -63,9 +75,14 @@ def plot_rmse(
     similarities = sorted(grouped)
     figure, axis = plt.subplots(figsize=(10, 6))
     plotted = 0
-    band_methods = {"DSS", "LBBK", "LBBK_Cohen"}
+    band_methods = {"DSS", "LBBK"}
 
-    for method in methods:
+    displayed_methods = [
+        method for method in methods if method not in EXCLUDED_METHODS
+    ]
+    plotted_values: list[float] = []
+
+    for method in displayed_methods:
         points: list[tuple[float, float]] = []
         standard_deviations: list[float] = []
         for similarity in similarities:
@@ -87,7 +104,14 @@ def plot_rmse(
         if not points:
             continue
         x, y = zip(*points)
-        axis.plot(x, y, marker="o", linewidth=1.8, label=method)
+        plotted_values.extend(y)
+        axis.plot(
+            x,
+            y,
+            marker="o",
+            linewidth=1.8,
+            label=METHOD_LABELS.get(method, method),
+        )
         if method in band_methods:
             lower = [
                 max(0.0, value - deviation)
@@ -103,7 +127,7 @@ def plot_rmse(
                 upper,
                 alpha=0.18,
                 linewidth=0,
-                label=f"{method} standard deviation",
+                label=f"{METHOD_LABELS.get(method, method)} ± deviazione standard",
             )
         plotted += 1
 
@@ -111,12 +135,16 @@ def plot_rmse(
         plt.close(figure)
         return 0
 
+    upper_y = max(plotted_values, default=1.0)
     axis.set(
         title="Experiment 6: RMSE della stima di similarità",
         xlabel="Similarità di Jaccard",
-        ylabel="RMSE",
+        ylabel="RMSE (radice dell'errore quadratico medio)",
         xlim=(min(similarities), max(similarities)),
+        ylim=(0.0, upper_y * 1.15),
     )
+    axis.ticklabel_format(axis="y", style="sci", scilimits=(-3, 3))
+    axis.yaxis.get_offset_text().set_fontsize(9)
     axis.grid(True, alpha=0.3)
     axis.legend()
     figure.tight_layout()
@@ -125,21 +153,22 @@ def plot_rmse(
     return plotted
 
 
+# Avvio da terminale: legge i dati e salva il grafico RMSE.
 def main() -> int:
     repository = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--input",
         type=Path,
-        default=repository / "SimQE_Plus_out.txt",
+        default=repository / "SimQE_out.txt",
         help="output dell'esperimento 6",
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=Path(__file__).resolve().parent
-        / "plots_345"
-        / "experiment6_rmse.png",
+        / "plots"
+        / "experiment_rmse.png",
         help="file PNG di destinazione",
     )
     args = parser.parse_args()
