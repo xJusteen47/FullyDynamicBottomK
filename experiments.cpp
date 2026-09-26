@@ -13,6 +13,8 @@
 
 using namespace std;
 
+void DMH_LBBK_update_exp();
+void RMSE_exp();
 void experiment1();
 void experiment1LBBK();
 void experiment2();
