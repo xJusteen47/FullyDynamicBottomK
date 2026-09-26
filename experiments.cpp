@@ -35,7 +35,7 @@ int main(int argc, char const *argv[])
    //experiment3();
    //experiment4();
    //experiment5();
-   experiment6();
+   //experiment6();
   // std::string datasetName = "dataset/dataset_soc-LiveJournal1.txt";
   // std::string datasetName = "dataset/dataset_com-orkut.ungraph.txt";
   // int b = 300;
@@ -49,6 +49,26 @@ int main(int argc, char const *argv[])
   return 0;
 }
 
+/**
+ * This is the experiments that creates the plots for the paper. It runs all the experiments in sequence.
+ * The output should be redirected to a file called "LBBK_LBKMH_out.txt", which will be used to create the plots.
+ */
+void DMH_LBBK_update_exp()
+{
+  experiment1();
+  experiment1LBBK();
+  experiment2();
+  experiment2LBBK();
+}
+
+/**
+ * This experiment evaluate the performance of RMSE (Root Mean Square Error) after a fixed number of updates.
+ * the output should be redirected to a file called "SimQE_out.txt", which will be used to create the plots.
+ */
+void RMSE_exp()
+{
+  experiment6();
+}
 
 /**
  * This experiment evaluate the performance of Buffered MinHash (BMH) after a fixed number of updates, using different values of l and k.
