@@ -221,6 +221,45 @@ void slidingWindowBottomK(int k, int l, uint32_t U, int N, int max_size)
 }
 
 /**
+ * This experiment evaluates the performance of the Bottom-M sketch
+ * The sketch is created with one buffer of size l.
+ * This experiment performs a sequence of insertions and removals, following a sliding window model.
+ * @param k size of the bottom-k
+ * @param l size of the buffers
+ * @param U size of the universe
+ * @param N 2*N is the number of operations
+ * @param max_size size of the sliding window
+ */
+void slidingWindowBottomK(int k, int l, uint32_t U, int N, int max_size)
+{
+    TreeBottomK *S = new TreeBottomK(k, l, U, false);
+    for (int j = 0; j < max_size; j++)
+        S->insert(j);
+
+    auto start = high_resolution_clock::now();
+    int n_fault = 0;
+    int first = 0;
+    for (uint32_t i = 0; i < N; i++)
+    {
+        bool doFault = S->remove(first);
+        if (doFault)
+        {
+            n_fault++;
+            for (uint32_t j = first + 1; j < first + max_size; j++)
+                S->insert(j);
+        }
+        S->insert(first + max_size + 1);
+        first++;
+    }
+
+    auto duration = duration_cast<microseconds>(high_resolution_clock::now() - start);
+    float t = (float)duration.count() / 1000000.0;
+
+    printf("%d, %d, %u, %d, %d, %f\n", k, l, 2 * N, max_size, n_fault, t);
+    delete S;
+}
+
+/**
  * This experiment evaluates the performance of the DSS sketch.
  * The sketch first inserts N elements and then removes them, measuring the time.
  * @param c (equivalent to c^2 in the original paper)
