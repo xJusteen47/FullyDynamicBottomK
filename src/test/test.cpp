@@ -11,7 +11,7 @@ using namespace std;
 
 void permute(int *a, int n)
 {
-    random_shuffle(a, a + n);
+    std::shuffle(a, a + n, std::default_random_engine());
 }
 
 /**
@@ -85,7 +85,7 @@ void singleSetImplicit(int k, int l, int N)
     float t = (float)duration.count() / 1000000.0;
 
     // print the results
-    printf("BufferKLMinhash, %d, %d, %u, %d, %f\n", k, l, 2 * N, n_fault, t);
+    printf("MinHash, %d, %d, %u, %d, %f\n", k, l, 2 * N, n_fault, t);
 
     delete S;
     delete[] sample;
@@ -177,7 +177,46 @@ void slidingWindowMinHash(int k, int l, uint32_t U, int N, int max_size)
     auto duration = duration_cast<microseconds>(high_resolution_clock::now() - start);
     float t = (float)duration.count() / 1000000.0;
 
-    printf("%d, %d, %u, %d, %d, %f\n", k, l, 2 * N, max_size, n_fault, t);
+    printf("MinHash, %d, %d, %u, %d, %d, %f\n", k, l, 2 * N, max_size, n_fault, t);
+    delete S;
+}
+
+/**
+ * This experiment evaluates the performance of the Bottom-M sketch
+ * The sketch is created with one buffer of size l.
+ * This experiment performs a sequence of insertions and removals, following a sliding window model.
+ * @param k size of the bottom-k
+ * @param l size of the buffers
+ * @param U size of the universe
+ * @param N 2*N is the number of operations
+ * @param max_size size of the sliding window
+ */
+void slidingWindowBottomK(int k, int l, uint32_t U, int N, int max_size)
+{
+    TreeBottomK *S = new TreeBottomK(k, l, U, false);
+    for (int j = 0; j < max_size; j++)
+        S->insert(j);
+
+    auto start = high_resolution_clock::now();
+    int n_fault = 0;
+    int first = 0;
+    for (uint32_t i = 0; i < N; i++)
+    {
+        bool doFault = S->remove(first);
+        if (doFault)
+        {
+            n_fault++;
+            for (uint32_t j = first + 1; j < first + max_size; j++)
+                S->insert(j);
+        }
+        S->insert(first + max_size + 1);
+        first++;
+    }
+
+    auto duration = duration_cast<microseconds>(high_resolution_clock::now() - start);
+    float t = (float)duration.count() / 1000000.0;
+
+    printf("BottomK, %d, %d, %u, %d, %d, %f\n", k, l, 2 * N, max_size, n_fault, t);
     delete S;
 }
 
@@ -766,9 +805,19 @@ double SE_DMH(int k, int l, uint32_t U, double p1, double p2, Hash<uint32_t> **h
  * @param p1 probability of 1 in the set A
  * @param p2 probability of 1 in the set B
  * @param hashes array of (`k`) hash functions
+ * @param target_similarity optional target similarity printed with diagnostics
+ * @param use_cohen_estimator use Cohen's common-threshold estimator when true
  * @return the squared error of the jacard similarity estimation
  */
-double SE_BottomK(int k, int l, uint32_t U, double p1, double p2, Hash<uint32_t> **hashes)
+double SE_BottomK(
+    int k,
+    int l,
+    uint32_t U,
+    double p1,
+    double p2,
+    Hash<uint32_t> **hashes,
+    double target_similarity = -1.0,
+    bool use_cohen_estimator = false)
 {
     // create a new TreeKLMinhash sketch for set A
     TreeBottomK *SA = new TreeBottomK(k, l, UINT32_MAX, hashes[0], false);
@@ -789,14 +838,31 @@ double SE_BottomK(int k, int l, uint32_t U, double p1, double p2, Hash<uint32_t>
             SB->insert(i);
     }
 
+    uint32_t size_s1 = count_one(A, U);
+    uint32_t size_s2 = count_one(B, U);
+
     // estimate the similarity between A and B
-    double estimation = TreeBottomK::bottomKSimilarity(SA, SB);
+    double estimation = use_cohen_estimator
+                            ? TreeBottomK::bottomKSimilarityTauEstimator(SA, SB)
+                            : TreeBottomK::bottomKSimilarity(SA, SB);
+    
 
     // compute the real Jaccard similarity between A and B
     double js = jaccard_sim(A, B, U);
 
     // return the squared error
     double err = estimation - js;
+
+    if (target_similarity >= 0.0)
+    {
+        printf(
+            "bottomk_sizes, %.6f, %.6f, %u, %u, %.9f\n",
+            target_similarity,
+            js,
+            size_s1,
+            size_s2,
+            err * err);
+    }
 
     delete SA;
     delete SB;

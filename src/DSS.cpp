@@ -175,7 +175,7 @@ public:
      */
     uint32_t *getSignature(double alpha = 1.0, double r = 1.0)
     {
-        int row = static_cast<uint>(log2(alpha * r * this->size));
+        int row = static_cast<uint32_t>(log2(alpha * r * this->size));
         return minHash(max(0, (int)row));
     }
 

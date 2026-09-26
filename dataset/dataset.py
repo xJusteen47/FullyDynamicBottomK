@@ -10,10 +10,13 @@ The new dataset selects the top 5000 nodes with the highest out-degree, and for 
 
 import networkx as nx
 
+
+# Parametri del dataset da generare.
 # DATASET_NAME = "soc-LiveJournal1.txt"
 DATASET_NAME = "com-youtube.ungraph.txt"
 d = 1
 
+# Lettura degli archi dal file di input.
 print(f"Reading file {DATASET_NAME}...", end=" ", flush=True)
 f = open(DATASET_NAME, "r")
 
@@ -23,11 +26,14 @@ f.close()
 print("Done!\n\n")
 
 
+# Costruzione del grafo diretto usato per ricavare i vicinati.
 print("Loading graph...", end=" ", flush=True)
 G = nx.DiGraph()
 G.add_edges_from(lines[1:])
 print("Done!")
 
+# Generazione del dataset: d=1 scrive i vicini dei nodi più connessi;
+# d=2 scrive le palle di raggio 2 e ne calcola le statistiche dimensionali.
 if d == 1:
     rank = sorted(G.out_degree(), key=lambda x: x[1], reverse=True)[:5000]
 

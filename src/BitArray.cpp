@@ -55,7 +55,7 @@ uint32_t count_one(__type *array, uint32_t U)
     uint32_t size = U / sizeof(__type) + 1;
     long long unsigned int count = 0;
     for (int i = 0; i < size; i++)
-        count += _mm_popcnt_u64(array[i]);
+        count +=  static_cast<uint32_t>(__builtin_popcountll(array[i]));
 
     return (uint32_t)count;
 }
@@ -89,7 +89,7 @@ uint32_t size_intersection(__type *A, __type *B, uint32_t U)
 
     uint32_t result = 0;
     for (int i = 0; i < size; i++)
-        result += _mm_popcnt_u64(A[i] & B[i]);
+        result += static_cast<uint32_t>(__builtin_popcountll(A[i] & B[i]));
     return result;
 }
 
@@ -99,7 +99,7 @@ uint32_t size_union(__type *A, __type *B, uint32_t U)
 
     uint32_t result = 0;
     for (int i = 0; i < size; i++)
-        result += _mm_popcnt_u64(A[i] | B[i]);
+        result += static_cast<uint32_t>(__builtin_popcountll(A[i] | B[i]));
     return result;
 }
 

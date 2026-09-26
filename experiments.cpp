@@ -1,6 +1,5 @@
 #include "src/DSS.cpp"
 #include "src/LSH.cpp"
-#include "src/TreeBottomK.h"
 #include "src/hash.cpp"
 #include "src/BitArray.cpp"
 #include "src/test/test.cpp"
@@ -10,12 +9,16 @@
 #include "src/Utils.cpp"
 
 #include "src/TreeKLMinhash.h"
-#include "src/DSS.cpp"
+#include "src/TreeBottomK.h"
 
 using namespace std;
 
+void DMH_LBBK_update_exp();
+void RMSE_exp();
 void experiment1();
+void experiment1LBBK();
 void experiment2();
+void experiment2LBBK();
 void experiment3();
 void experiment4();
 void experiment5();
@@ -27,12 +30,14 @@ void datasetStatistics(std::string);
 int main(int argc, char const *argv[])
 {
   // example of usage
-   experiment1LBBK();
-   experiment2LBBK();
-   experiment3();
-   experiment4();
-   experiment5();
-   experiment6();
+   //experiment1();
+   //experiment1LBBK();
+   //experiment2();
+   //experiment2LBBK();
+   //experiment3();
+   //experiment4();
+   //experiment5();
+   //experiment6();
   // std::string datasetName = "dataset/dataset_soc-LiveJournal1.txt";
   // std::string datasetName = "dataset/dataset_com-orkut.ungraph.txt";
   // int b = 300;
@@ -47,64 +52,24 @@ int main(int argc, char const *argv[])
 }
 
 /**
- * Bottom-k counterpart of the buffered MinHash experiments.
- *
- *  The values of m are the values used for k in the
- * original experiments, while l is always at least k.
+ * This is the experiments that creates the plots for the paper. It runs all the experiments in sequence.
+ * The output should be redirected to a file called "LBBK_LBKMH_out.txt", which will be used to create the plots.
  */
-void experiment8()
+void DMH_LBBK_update_exp()
 {
-  const uint32_t U = UINT32_MAX;
-  const int M[6] = {64, 128, 256, 512, 1024, 2048};
-  const int lMultipliers[3] = {1, 2, 4};
-  const int N = 1 << 16;
-  const int nTests = 8;
+  experiment1();
+  experiment1LBBK();
+  experiment2();
+  experiment2LBBK();
+}
 
-  cout << "Bottom-m updates" << endl;
-#pragma omp parallel for collapse(2)
-  for (int i = 0; i < 6; ++i)
-    for (int j = 0; j < nTests; ++j)
-      for (int multiplier : lMultipliers)
-        singleSetImplicitBottomK(M[i], M[i] * multiplier, N);
-
-  cout << "Bottom-k sliding window" << endl;
-  const int windowN = 1 << 10;
-  const int maxSize = windowN / 5;
-#pragma omp parallel for collapse(2)
-  for (int i = 0; i < 6; ++i)
-    for (int j = 0; j < nTests; ++j)
-      for (int multiplier : lMultipliers)
-        slidingWindowBottomK(
-            M[i], M[i] * multiplier, U, 2 * windowN, maxSize);
-
-  cout << "Bottom-k queries" << endl;
-  const int querySize = 1 << 16;
-  const int nQueries = 1 << 16;
-#pragma omp parallel for collapse(2)
-  for (int i = 0; i < 6; ++i)
-    for (int j = 0; j < nTests; ++j)
-      for (int multiplier : lMultipliers)
-        testBottomKQuery(
-            M[i], M[i] * multiplier, querySize, nQueries);
-
-  cout << "Bottom-k similarity" << endl;
-  const uint32_t similarityU = 1 << 12;
-  const double p1 = 0.75;
-  const double p2 = 0.10;
-#pragma omp parallel for collapse(2)
-  for (int i = 0; i < 6; ++i)
-    for (int j = 0; j < nTests; ++j)
-    {
-      for (int multiplier : lMultipliers)
-      {
-        TabulationHash<uint32_t> hash;
-        Hash<uint32_t> *hashes[1] = {&hash};
-        const double error = SE_BottomK(
-            M[i], M[i] * multiplier, similarityU, p1, p2, hashes);
-        printf("BottomKSimilarity,%d,%d,%f\n",
-               M[i], M[i] * multiplier, error);
-      }
-    }
+/**
+ * This experiment evaluate the performance of RMSE (Root Mean Square Error) after a fixed number of updates.
+ * the output should be redirected to a file called "SimQE_out.txt", which will be used to create the plots.
+ */
+void RMSE_exp()
+{
+  experiment6();
 }
 
 /**
@@ -116,6 +81,8 @@ void experiment1()
   int K[4] = {1, 100, 1000, 2000};
   int N = 1 << 16;
   int n_tests = 8;
+
+  cout << "\nBuffered MinHash fixed updates\n";
 
 #pragma omp parallel for collapse(2)
 
@@ -135,7 +102,45 @@ void experiment1()
         singleSetImplicit(k, l, N);
     }
   }
+
+  cout<< "\nEnd of Buffered MinHash fixed updates\n\n" << endl;
 }
+
+/**
+ * This experiment evaluate the performance of L-buffered bottom-k (LBBK) after a fixed number of updates, using different values of l and k.
+ */
+void experiment1LBBK()
+{
+  uint32_t U = UINT32_MAX;
+  int K[4] = {1, 100, 1000, 2000};
+  int N = 1 << 16;
+  int n_tests = 8;
+
+  cout << "\nL-buffered bottom-k fixed updates\n";
+
+#pragma omp parallel for collapse(2)
+
+  for (int n = 0; n < n_tests; n++)
+  {
+    for (int i = 0; i < 4; i++)
+    {
+      int k = K[i];
+
+      // l = k
+      singleSetImplicitBottomK(k, k, N);
+
+      for (int l = 5*k; l <= 100*k; l += 5*k)
+        singleSetImplicitBottomK(k, l, N);
+
+      for (int l = 200*k; l <= 1000*k; l += 100*k)
+        singleSetImplicitBottomK(k, l, N);
+    }
+  }
+
+  cout << "\nEnd of L-buffered bottom-k fixed updates\n\n" << endl;
+}
+
+
 
 /**
  * This experiment evaluate the performance of L-buffered bottom-k (LBBK) after a fixed number of updates, using different values of l and k.
@@ -181,6 +186,8 @@ void experiment2()
   int max_size = N / 5;
   int n_tests = 10;
 
+  cout << "\nBuffered MinHash sliding window\n";
+
 #pragma omp parallel for
 
   for (int n = 0; n < n_tests; n++)
@@ -203,6 +210,50 @@ void experiment2()
       }
     }
   }
+
+  cout << "\nEnd of Buffered MinHash sliding window\n";
+}
+
+
+/**
+ * This experiment evaluate the performance of L-buffered bottom-k (LBBK) after a fixed number of updates, using different values of l and k.
+ * More precisely, the sequence of updates is generated by a sliding window.
+ */
+void experiment2LBBK()
+{
+  uint32_t U = UINT32_MAX;
+  int K[4] = {1, 100, 1000, 5000};
+  // int N = 1 << 17;
+  int N = 1 << 10;
+  int max_size = N / 5;
+  int n_tests = 10;
+
+  cout << "\nL-buffered bottom-k sliding window\n";
+
+#pragma omp parallel for
+
+  for (int n = 0; n < n_tests; n++)
+  {
+    for (int i = 0; i < 4; i++)
+    {
+      int k = K[i];
+
+      // l=k = 1
+      slidingWindowBottomK(k, k, U, 2 * N, max_size);
+
+      for (int l = 5*k; l <= 100*k; l += 5*k)
+      {
+        slidingWindowBottomK(k, l, U, 2 * N, max_size);
+      }
+
+      for (int l = 200*k; l <= 1000*k; l += 100*k)
+      {
+        slidingWindowBottomK(k, l, U, 2 * N, max_size);
+      }
+    }
+  }
+
+  cout << "\nEnd of L-buffered bottom-k sliding window\n";
 }
 
 
@@ -255,7 +306,7 @@ void experiment3()
   int l = 32;
   int n_tests = 10;
 
-  cout << "l-buffered k-minhash" << endl;
+  cout << "\nBuffered MinHash experiment3\n";
 
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 6; i++)
@@ -264,15 +315,19 @@ void experiment3()
       singleSetImplicit(K[i], l, N);
   }
   
-  cout << "l-buffered bottom-k" << endl;
+  cout << "\nEnd of Buffered MinHash experiment3\n\n" << endl;
+
+  cout << "l-buffered bottom-k experiment3\n";
 
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 6; i++)
   {
     for (int n = 0; n < n_tests; n++)
-      singleSetImplicitBottomK(K[i], l, N);
+      singleSetImplicitBottomK(K[i], l*K[i], N);
   }
 
+  cout << "\nEnd of l-buffered bottom-k experiment3\n\n" << endl;
+  /*
   cout << "DSS" << endl;
 
 #pragma omp parallel for collapse(2)
@@ -290,7 +345,7 @@ void experiment3()
     for (int n = 0; n < n_tests; n++)
       testDSSProactive(K[i], N, K[i]);
   }
-
+*/
   
 }
 
@@ -307,11 +362,24 @@ void experiment4()
   int n_query = 1 << 16;
   int n_tests = 14;
 
+  cout << "\nBuffered MinHash experiment4\n";
+
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 6; i++)
     for (int n = 0; n < n_tests; n++)
       testKLMinhashQuery(l, size, n_query, K[i]);
 
+  cout << "\nEnd of Buffered MinHash experiment4\n\n" << endl;
+
+  cout << "l-buffered bottom-k experiment4\n";
+
+#pragma omp parallel for collapse(2)
+  for (int i = 0; i < 6; i++)
+    for (int n = 0; n < n_tests; n++)
+      testBottomKQuery( K[i], l*K[i], size, n_query);
+
+  cout << "\nEnd of l-buffered bottom-k experiment4\n\n" << endl;
+      /*
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 6; i++)
     for (int n = 0; n < n_tests; n++)
@@ -327,6 +395,8 @@ void experiment4()
   for (int i = 0; i < 6; i++)
     for (int n = 0; n < n_tests; n++)
       testDSSProactiveQuery(K[i], size, n_query, K[i]);
+
+      */
 }
 
 /**
@@ -345,11 +415,24 @@ void experiment5()
 
   cout << "sketch,k,l,N,n_hash,faults,p,time" << endl;
 
+  cout << "\nBuffered MinHash experiment5\n";
+
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 15; i++)
     for (int n = 0; n < n_tests; n++)
       testKLMinhashUpdatesAndQuery(n_hashes, l, size, p[i]);
 
+    cout << "\nEnd of Buffered MinHash experiment5\n\n" << endl;
+
+    cout << "l-buffered bottom-k experiment5\n";
+#pragma omp parallel for collapse(2)
+  for (int i = 0; i < 15; i++)
+    for (int n = 0; n < n_tests; n++)
+      testLBBKUpdatesAndQuery(n_hashes, l*n_hashes, size, p[i]); // n_hashes is the value of k for LBBK in this case
+
+  cout << "\nEnd of l-buffered bottom-k experiment5\n\n" << endl;
+  
+      /*
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < 15; i++)
     for (int n = 0; n < n_tests; n++)
@@ -365,6 +448,7 @@ void experiment5()
   for (int i = 0; i < 15; i++)
     for (int n = 0; n < n_tests; n++)
       testDSSUpdatesAndQuery(c, size, n_hashes, p[i]);
+      */
 }
 
 /**
@@ -407,7 +491,8 @@ void experiment6()
   PairWiseHash<uint32_t> *h1 = new PairWiseHash<uint32_t>();
   PairWiseHash<uint32_t> *h2 = new PairWiseHash<uint32_t>(c);
 
-  cout << "sim,DMH,DSS,min_hash,LBBK" << endl;
+  cout << "sim,DMH,DSS,min_hash,LBBK,LBBK_Cohen" << endl;
+  cout << "bottomk_sizes,target_similarity,actual_jaccard,size_A,size_B,squared_error" << endl;
 
   for (auto itr = params.begin(); itr != params.end(); itr++)
   {
@@ -419,6 +504,7 @@ void experiment6()
     double err_DSS = 0.0;
     double err_min_hash = 0.0;
     double err_LBBK = 0.0;
+    double err_LBBK_Cohen = 0.0;
 
 #pragma omp parallel for // reduction(+ : err_DMH, err_DSS)
     for (int n = 0; n < n_test; n++)
@@ -426,9 +512,19 @@ void experiment6()
       err_DMH = SE_DMH(k, l, U, p1, p2, (Hash<uint32_t> **)hashes);
       err_DSS = SE_DSS(c, c, U, p1, p2, (Hash<uint32_t> **)hashes, (Hash<uint32_t> *)h1, (Hash<uint32_t> *)h2);
       err_min_hash = SE_DMH(k * l, 1, U, p1, p2, (Hash<uint32_t> **)hashes);
-      err_LBBK = SE_BottomK(k, l, U, p1, p2, (Hash<uint32_t> **)hashes);
+      err_LBBK = SE_BottomK(
+          k, l * k, U, p1, p2, (Hash<uint32_t> **)hashes, j, false);
+      err_LBBK_Cohen = SE_BottomK(
+          k, l * k, U, p1, p2, (Hash<uint32_t> **)hashes, j, true);
 
-      printf("%f, %f, %f, %f, %f\n", j, err_DMH, err_DSS, err_min_hash, err_LBBK);
+      printf(
+          "%f, %f, %f, %f, %f, %f\n",
+          j,
+          err_DMH,
+          err_DSS,
+          err_min_hash,
+          err_LBBK,
+          err_LBBK_Cohen);
     }
 
     // err_DMH = sqrt(err_DMH / (double)n_test);
