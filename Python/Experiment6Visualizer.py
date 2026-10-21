@@ -5,7 +5,8 @@ script aggregates those rows by true Jaccard similarity and computes:
 
     RMSE = sqrt(mean(squared errors))
 
-For DSS and LBBK it also displays the standard deviation around the RMSE.
+For DMH, DSS and the Cohen LBBK estimator it also displays the standard
+deviation around the RMSE.
 Diagnostic ``bottomk_sizes`` rows from the extended output are ignored.
 
 Usage:
@@ -24,12 +25,12 @@ from pathlib import Path
 
 
 # Etichette mostrate nel grafico e metodi da escludere.
-EXCLUDED_METHODS = {"LBBK_Cohen", "Cohen", "Tau", "tau"}
+EXCLUDED_METHODS = {"LBBK", "Cohen", "Tau", "tau"}
 METHOD_LABELS = {
     "DMH": "DMH",
     "DSS": "DSS",
     "min_hash": "MinHash",
-    "LBBK": "LBBK",
+    "LBBK_Cohen": "LBBK (Cohen)",
 }
 
 
@@ -75,7 +76,7 @@ def plot_rmse(
     similarities = sorted(grouped)
     figure, axis = plt.subplots(figsize=(10, 6))
     plotted = 0
-    band_methods = {"DSS", "LBBK"}
+    band_methods = {"DMH", "DSS", "LBBK_Cohen"}
 
     displayed_methods = [
         method for method in methods if method not in EXCLUDED_METHODS
@@ -121,6 +122,7 @@ def plot_rmse(
                 value + deviation
                 for value, deviation in zip(y, standard_deviations)
             ]
+            plotted_values.extend(upper)
             axis.fill_between(
                 x,
                 lower,

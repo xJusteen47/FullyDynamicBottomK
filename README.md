@@ -55,6 +55,16 @@ The generated images are saved in `Python/plots/`:
 - `average_faults_sliding_window.png`
 - `average_time_sliding_window.png`
 - Raw and normalized variations of the fault and runtime plots
+- `average_time_fixed_updates_raw_k_<k>.png`: one raw fixed-update runtime plot
+  for each available `k`, with DMH and LBBK compared at that same `k`
+- `average_time_sliding_window_raw_k_<k>.png`: one raw sliding-window runtime
+  plot for each available `k`, with the Y-axis capped at the maximum runtime
+  reached by the DMH/LBBK pair
+- `average_faults_sliding_window_raw_k_<k>.png`: one raw sliding-window fault
+  plot for each available `k`, with the Y-axis capped at the maximum fault
+  count reached by the DMH/LBBK pair
+- `average_faults_sliding_window_raw.png`: combined raw sliding-window fault
+  plot containing all `k` values, with the Y-axis capped at 20
 
 To use another output file or output directory:
 

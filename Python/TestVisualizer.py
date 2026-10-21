@@ -372,6 +372,7 @@ def _plot_average_metric_by_size(
     metric: str,
     output: Path,
     normalize: bool,
+    y_max: float | None = None,
 ) -> bool:
     """Plot average faults or time against the total sketch size."""
 
@@ -447,7 +448,7 @@ def _plot_average_metric_by_size(
     if normalize:
         axis.set_ylim(0, 1.05)
     elif metric == "faults":
-        axis.set_ylim(bottom=0, top=50)
+        axis.set_ylim(bottom=0, top=y_max if y_max is not None else 50)
     axis.grid(True, alpha=0.3)
     axis.legend(ncol=2, fontsize="small")
     figure.tight_layout()
@@ -456,7 +457,172 @@ def _plot_average_metric_by_size(
     return True
 
 
-# Avvio da terminale e selezione degli otto grafici da produrre.
+def _plot_raw_fixed_time_by_k(
+    timings: list[TimingResult], k: int, output: Path
+) -> bool:
+    """Plot raw fixed-update runtimes for one k, comparing DMH and LBBK."""
+
+    records = [
+        result
+        for result in timings
+        if result.sketch in {"MinHash", "BottomK"}
+        and result.k == k
+        and result.l > 0
+    ]
+    if not records:
+        return False
+
+    import matplotlib.pyplot as plt
+
+    grouped: dict[str, dict[int, list[float]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    for result in records:
+        sketch = "DMH" if result.sketch == "MinHash" else "LBBK"
+        total_size = result.k * result.l if sketch == "DMH" else result.l
+        grouped[sketch][total_size].append(result.seconds)
+
+    figure, axis = plt.subplots(figsize=(11, 7))
+    for sketch, points in sorted(grouped.items()):
+        x = sorted(points)
+        y = [statistics.mean(points[size]) for size in x]
+        linestyle = "--" if sketch == "DMH" else "-"
+        axis.plot(
+            x,
+            y,
+            marker="o",
+            linestyle=linestyle,
+            label=sketch,
+        )
+
+    axis.set(
+        title=f"Tempo raw fixed update per k={k}",
+        xlabel="Dimensione totale dello sketch (k*l DMH, l LBBK)",
+        ylabel="Tempo medio (s)",
+    )
+    axis.set_xscale("log")
+    axis.set_ylim(0, 5 if k in {1, 100} else 50)
+    axis.grid(True, alpha=0.3)
+    axis.legend()
+    figure.tight_layout()
+    figure.savefig(output, dpi=150)
+    plt.close(figure)
+    return True
+
+
+def _plot_raw_sliding_time_by_k(
+    timings: list[TimingResult], k: int, output: Path
+) -> bool:
+    """Plot raw sliding-window runtimes for one k, comparing DMH and LBBK."""
+
+    records = [
+        result
+        for result in timings
+        if result.sketch in {"MinHash-window", "BottomK-window"}
+        and result.k == k
+        and result.l > 0
+    ]
+    if not records:
+        return False
+
+    import matplotlib.pyplot as plt
+
+    grouped: dict[str, dict[int, list[float]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    for result in records:
+        sketch = "DMH" if result.sketch == "MinHash-window" else "LBBK"
+        total_size = result.k * result.l if sketch == "DMH" else result.l
+        grouped[sketch][total_size].append(result.seconds)
+
+    figure, axis = plt.subplots(figsize=(11, 7))
+    plotted_values: list[float] = []
+    for sketch, points in sorted(grouped.items()):
+        x = sorted(points)
+        y = [statistics.mean(points[size]) for size in x]
+        plotted_values.extend(y)
+        linestyle = "--" if sketch == "DMH" else "-"
+        axis.plot(
+            x,
+            y,
+            marker="o",
+            linestyle=linestyle,
+            label=sketch,
+        )
+
+    maximum = max(plotted_values, default=0.0)
+    axis.set(
+        title=f"Tempo raw sliding window per k={k}",
+        xlabel="Dimensione totale dello sketch (k*l DMH, l LBBK)",
+        ylabel="Tempo medio (s)",
+    )
+    axis.set_xscale("log")
+    axis.set_ylim(0, maximum if maximum > 0 else 1)
+    axis.grid(True, alpha=0.3)
+    axis.legend()
+    figure.tight_layout()
+    figure.savefig(output, dpi=150)
+    plt.close(figure)
+    return True
+
+
+def _plot_raw_sliding_faults_by_k(
+    timings: list[TimingResult], k: int, output: Path
+) -> bool:
+    """Plot raw sliding-window faults for one k, comparing DMH and LBBK."""
+
+    records = [
+        result
+        for result in timings
+        if result.sketch in {"MinHash-window", "BottomK-window"}
+        and result.k == k
+        and result.l > 0
+    ]
+    if not records:
+        return False
+
+    import matplotlib.pyplot as plt
+
+    grouped: dict[str, dict[int, list[float]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    for result in records:
+        sketch = "DMH" if result.sketch == "MinHash-window" else "LBBK"
+        total_size = result.k * result.l if sketch == "DMH" else result.l
+        grouped[sketch][total_size].append(result.faults)
+
+    figure, axis = plt.subplots(figsize=(11, 7))
+    plotted_values: list[float] = []
+    for sketch, points in sorted(grouped.items()):
+        x = sorted(points)
+        y = [statistics.mean(points[size]) for size in x]
+        plotted_values.extend(y)
+        linestyle = "--" if sketch == "DMH" else "-"
+        axis.plot(
+            x,
+            y,
+            marker="o",
+            linestyle=linestyle,
+            label=sketch,
+        )
+
+    maximum = max(plotted_values, default=0.0)
+    axis.set(
+        title=f"Fault raw sliding window per k={k}",
+        xlabel="Dimensione totale dello sketch (k*l DMH, l LBBK)",
+        ylabel="Numero medio di fault",
+    )
+    axis.set_xscale("log")
+    axis.set_ylim(0, maximum if maximum > 0 else 1)
+    axis.grid(True, alpha=0.3)
+    axis.legend()
+    figure.tight_layout()
+    figure.savefig(output, dpi=150)
+    plt.close(figure)
+    return True
+
+
+# Avvio da terminale e selezione dei grafici da produrre.
 def main() -> int:
     repository = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
@@ -490,6 +656,22 @@ def main() -> int:
 
     timings, similarities = read_results(args.input)
     args.output_dir.mkdir(parents=True, exist_ok=True)
+    fixed_k_values = sorted(
+        {
+            result.k
+            for result in timings
+            if result.sketch in {"MinHash", "BottomK"}
+            and result.l > 0
+        }
+    )
+    sliding_k_values = sorted(
+        {
+            result.k
+            for result in timings
+            if result.sketch in {"MinHash-window", "BottomK-window"}
+            and result.l > 0
+        }
+    )
     created = [
         _plot_average_metric_by_size(
             timings,
@@ -539,6 +721,7 @@ def main() -> int:
             metric="faults",
             output=args.output_dir / "average_faults_sliding_window_raw.png",
             normalize=False,
+            y_max=20,
         ),
         _plot_average_metric_by_size(
             timings,
@@ -548,6 +731,35 @@ def main() -> int:
             normalize=False,
         ),
     ]
+    raw_fixed_by_k = [
+        _plot_raw_fixed_time_by_k(
+            timings,
+            k=k,
+            output=args.output_dir / f"average_time_fixed_updates_raw_k_{k}.png",
+        )
+        for k in fixed_k_values
+    ]
+    created.extend(raw_fixed_by_k)
+    raw_sliding_by_k = [
+        _plot_raw_sliding_time_by_k(
+            timings,
+            k=k,
+            output=args.output_dir
+            / f"average_time_sliding_window_raw_k_{k}.png",
+        )
+        for k in sliding_k_values
+    ]
+    created.extend(raw_sliding_by_k)
+    raw_sliding_faults_by_k = [
+        _plot_raw_sliding_faults_by_k(
+            timings,
+            k=k,
+            output=args.output_dir
+            / f"average_faults_sliding_window_raw_k_{k}.png",
+        )
+        for k in sliding_k_values
+    ]
+    created.extend(raw_sliding_faults_by_k)
     print(f"Record di tempo letti: {len(timings)}")
     print(f"Record di similarità letti: {len(similarities)}")
     print(f"Grafici creati: {sum(created)} in {args.output_dir}")
